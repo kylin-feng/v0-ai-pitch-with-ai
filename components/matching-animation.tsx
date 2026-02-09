@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Spinner } from "@/components/ui/spinner"
+
+import { useEffect, useState } from "react"
+import { Loader2 } from "lucide-react"
 
 const steps = [
   "正在初始化AI分身...",
@@ -58,7 +60,7 @@ export function MatchingAnimation({ onComplete }: MatchingAnimationProps) {
           <div className="absolute h-32 w-32 rounded-full border border-primary/20 animate-ping" style={{ animationDuration: "2s" }} />
           <div className="absolute h-24 w-24 rounded-full border border-primary/30 animate-ping" style={{ animationDuration: "1.5s" }} />
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
-            <Spinner className="h-8 w-8 text-primary" />
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
           </div>
         </div>
 
