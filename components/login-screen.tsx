@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import type { Role } from "@/lib/types"
-import { Briefcase, Rocket } from "lucide-react"
+import { Briefcase, Rocket, Loader2 } from "lucide-react"
 
 interface LoginScreenProps {
   onLogin: (role: Role) => void
@@ -11,6 +11,19 @@ interface LoginScreenProps {
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSecondMeLogin = () => {
+    if (!selectedRole) return
+
+    setIsLoading(true)
+
+    // 保存选择的角色到localStorage，OAuth回调后读取
+    localStorage.setItem("pendingRole", selectedRole)
+
+    // 跳转到Second Me OAuth授权页面
+    window.location.href = "/api/auth/authorize"
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
@@ -54,11 +67,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             <button
               type="button"
               onClick={() => setSelectedRole("founder")}
+              disabled={isLoading}
               className={`group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all ${
                 selectedRole === "founder"
                   ? "border-primary bg-primary/10"
                   : "border-border bg-card hover:border-primary/50 hover:bg-card/80"
-              }`}
+              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
@@ -80,11 +94,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             <button
               type="button"
               onClick={() => setSelectedRole("investor")}
+              disabled={isLoading}
               className={`group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all ${
                 selectedRole === "investor"
                   ? "border-primary bg-primary/10"
                   : "border-border bg-card hover:border-primary/50 hover:bg-card/80"
-              }`}
+              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
@@ -110,10 +125,17 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           <Button
             size="lg"
             className="w-full text-base font-semibold"
-            disabled={!selectedRole}
-            onClick={() => selectedRole && onLogin(selectedRole)}
+            disabled={!selectedRole || isLoading}
+            onClick={handleSecondMeLogin}
           >
-            {"Second Me 一键登录"}
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {"正在跳转..."}
+              </>
+            ) : (
+              "Second Me 一键登录"
+            )}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
             {"使用 Second Me 账号安全登录，您的AI分身将代表您进行初步沟通"}
