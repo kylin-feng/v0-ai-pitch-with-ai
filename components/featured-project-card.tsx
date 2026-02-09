@@ -15,8 +15,11 @@ export function FeaturedProjectCard({ project, index }: FeaturedProjectCardProps
       className="group relative flex flex-col gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:bg-card/80"
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      {/* AI Score Badge */}
-      <div className="absolute -top-2.5 right-4">
+      {/* Demo + AI Score Badges */}
+      <div className="absolute -top-2.5 right-4 flex items-center gap-1.5">
+        <div className="rounded-full border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground">
+          {"示例"}
+        </div>
         <div className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/20">
           <Sparkles className="h-3 w-3" />
           {`AI评分 ${project.aiScore}`}

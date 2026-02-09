@@ -101,20 +101,14 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             </div>
           </div>
 
-          {/* Stats bar */}
-          <div className="grid grid-cols-3 gap-6 rounded-xl border border-border bg-card/40 px-8 py-4 backdrop-blur-sm md:gap-12">
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="font-display text-2xl font-bold text-foreground">{"2,847"}</span>
-              <span className="text-xs text-muted-foreground">{"年轻创业者"}</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="font-display text-2xl font-bold text-foreground">{"486"}</span>
-              <span className="text-xs text-muted-foreground">{"活跃投资人"}</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="font-display text-2xl font-bold text-accent">{"92%"}</span>
-              <span className="text-xs text-muted-foreground">{"匹配满意度"}</span>
-            </div>
+          {/* Vision statement */}
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card/40 px-8 py-5 backdrop-blur-sm text-center max-w-lg">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {"1999年，所有人拒绝马云。2006年，没人相信宿舍里能做出无人机。2015年，没人看好下沉市场电商。"}
+            </p>
+            <p className="text-sm font-semibold text-foreground">
+              {"现在，AI让发现下一个他们变得更快、更准。"}
+            </p>
           </div>
 
           {/* Role selection + Login */}
@@ -250,13 +244,13 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           <div className="mb-10 flex flex-col items-center gap-3 text-center">
             <Badge variant="secondary" className="text-xs px-3 py-1">
               <Sparkles className="mr-1 h-3 w-3" />
-              {"AI 精选推荐"}
+              {"Demo - 项目展示示例"}
             </Badge>
             <h2 className="font-display text-3xl font-bold tracking-tight text-balance md:text-4xl">
-              {"这些年轻人正在改变世界"}
+              {"想象一下，这些项目出现在你面前"}
             </h2>
             <p className="max-w-lg text-muted-foreground leading-relaxed text-balance">
-              {"平均年龄25岁，他们可能就是下一个马云、下一个黄峥。AI已经完成了初步评估，你要做的只是给他们一个机会。"}
+              {"以下是AI Pitch平台的项目展示示例。未来，真正的年轻创业者们将在这里等待你的发现。"}
             </p>
           </div>
 
@@ -270,7 +264,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           {/* CTA */}
           <div className="mt-12 flex flex-col items-center gap-4">
             <p className="text-center text-sm text-muted-foreground text-balance">
-              {"还有更多优质项目等待发现。登录后，AI将根据你的偏好推荐最匹配的项目。"}
+              {"成为第一批用户，用AI发现那些还没被看见的下一个马云、下一个拼多多、下一个大疆。"}
             </p>
             <Button
               size="lg"
