@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FeaturedProjectCard } from "@/components/featured-project-card"
 import type { Role } from "@/lib/types"
-import { featuredProjects, successStories } from "@/lib/mock-data"
+import { successStories } from "@/lib/mock-data"
 import {
   Briefcase,
   Rocket,
@@ -13,6 +12,9 @@ import {
   Zap,
   TrendingUp,
   ChevronDown,
+  MessageSquare,
+  UserCheck,
+  Search,
 } from "lucide-react"
 
 interface LoginScreenProps {
@@ -31,7 +33,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   }, [])
 
   const scrollToProjects = () => {
-    document.getElementById("featured-projects")?.scrollIntoView({ behavior: "smooth" })
+    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })
   }
 
   return (
@@ -183,7 +185,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             onClick={scrollToProjects}
             className="mt-4 flex flex-col items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
           >
-            <span className="text-xs">{"查看明星项目推荐"}</span>
+            <span className="text-xs">{"了解如何运作"}</span>
             <ChevronDown className="h-4 w-4 animate-bounce" />
           </button>
         </div>
@@ -236,35 +238,81 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         </div>
       </section>
 
-      {/* ===== FEATURED PROJECTS SECTION ===== */}
-      <section id="featured-projects" className="relative border-t border-border px-4 py-20">
+      {/* ===== HOW IT WORKS SECTION ===== */}
+      <section id="how-it-works" className="relative border-t border-border px-4 py-20">
         <div className="pointer-events-none absolute top-0 left-1/4 h-[400px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
 
-        <div className="relative z-10 mx-auto max-w-5xl">
-          <div className="mb-10 flex flex-col items-center gap-3 text-center">
+        <div className="relative z-10 mx-auto max-w-4xl">
+          <div className="mb-14 flex flex-col items-center gap-3 text-center">
             <Badge variant="secondary" className="text-xs px-3 py-1">
-              <Sparkles className="mr-1 h-3 w-3" />
-              {"Demo - 项目展示示例"}
+              {"平台流程"}
             </Badge>
             <h2 className="font-display text-3xl font-bold tracking-tight text-balance md:text-4xl">
-              {"想象一下，这些项目出现在你面前"}
+              {"4步完成匹配，全程AI驱动"}
             </h2>
             <p className="max-w-lg text-muted-foreground leading-relaxed text-balance">
-              {"以下是AI Pitch平台的项目展示示例。未来，真正的年轻创业者们将在这里等待你的发现。"}
+              {"不再盲目社交，不再浪费时间。AI先聊，合适再见面。"}
             </p>
           </div>
 
-          {/* Project Grid */}
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {featuredProjects.map((project, i) => (
-              <FeaturedProjectCard key={project.id} project={project} index={i} />
+          {/* Steps */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {[
+              {
+                step: 1,
+                icon: UserCheck,
+                title: "填写你的信息",
+                desc: "创业者填写项目数据，投资人填写投资偏好。这些信息将成为你AI分身的「大脑」。",
+                color: "bg-primary/10 text-primary",
+              },
+              {
+                step: 2,
+                icon: Search,
+                title: "AI 智能匹配",
+                desc: "平台基于双方信息进行多维度匹配分析，找到最可能「聊得来」的对象。",
+                color: "bg-accent/10 text-accent",
+              },
+              {
+                step: 3,
+                icon: MessageSquare,
+                title: "AI 分身替你聊",
+                desc: "你的AI分身会代表你与对方的AI分身进行8轮以上的深度对话，覆盖商业模式、市场空间、团队能力等核心议题。",
+                color: "bg-primary/10 text-primary",
+              },
+              {
+                step: 4,
+                icon: Rocket,
+                title: "查看结果，决定是否见面",
+                desc: "AI生成匹配评分、对话摘要和关键发现。双方都满意？那就安排真人见面。",
+                color: "bg-accent/10 text-accent",
+              },
+            ].map((item) => (
+              <div
+                key={item.step}
+                className="group relative flex gap-5 rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary/30"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${item.color}`}
+                  >
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <span className="font-display text-xs font-bold text-muted-foreground">
+                    {`STEP ${item.step}`}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-display text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                </div>
+              </div>
             ))}
           </div>
 
           {/* CTA */}
-          <div className="mt-12 flex flex-col items-center gap-4">
-            <p className="text-center text-sm text-muted-foreground text-balance">
-              {"成为第一批用户，用AI发现那些还没被看见的下一个马云、下一个拼多多、下一个大疆。"}
+          <div className="mt-14 flex flex-col items-center gap-4">
+            <p className="max-w-md text-center text-muted-foreground leading-relaxed text-balance">
+              {"成为第一批用户。也许下一个马云、下一个拼多多、下一个大疆，正在等待一个看见他们的人。"}
             </p>
             <Button
               size="lg"
@@ -273,7 +321,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 window.scrollTo({ top: 0, behavior: "smooth" })
               }}
             >
-              {"立即开始匹配"}
+              {"立即开始"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -310,23 +358,4 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   )
 }
 
-function Sparkles(props: React.SVGProps<SVGSVGElement> & { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-      <path d="M20 3v4" />
-      <path d="M22 5h-4" />
-      <path d="M4 17v2" />
-      <path d="M5 18H3" />
-    </svg>
-  )
-}
+
