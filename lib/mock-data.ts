@@ -233,14 +233,6 @@ export const investorMatches: MatchResult[] = [
   },
 ]
 
-export const successStories = [
-  { name: "马云", company: "阿里巴巴", year: "1999", note: "被30多个投资人拒绝后遇到蔡崇信" },
-  { name: "黄峥", company: "拼多多", year: "2015", note: "创立3年即上市，市值超千亿" },
-  { name: "汪滔", company: "大疆创新", year: "2006", note: "大学宿舍里诞生的全球无人机霸主" },
-  { name: "张一鸣", company: "字节跳动", year: "2012", note: "29岁创立，10年成为全球巨头" },
-  { name: "程维", company: "滴滴出行", year: "2012", note: "从阿里离职后改变中国出行方式" },
-]
-
 export const industries = [
   "人工智能",
   "企业服务",
