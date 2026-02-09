@@ -233,6 +233,116 @@ export const investorMatches: MatchResult[] = [
   },
 ]
 
+export interface FeaturedProject {
+  id: string
+  name: string
+  founder: string
+  founderAge: number
+  tagline: string
+  industry: string
+  stage: string
+  monthlyRevenue: string
+  growth: string
+  teamSize: number
+  highlights: string[]
+  aiScore: number
+}
+
+export const featuredProjects: FeaturedProject[] = [
+  {
+    id: "fp-1",
+    name: "NeuraFlow",
+    founder: "林浩然",
+    founderAge: 24,
+    tagline: "下一代AI工作流编排平台，让企业像拼积木一样构建AI应用",
+    industry: "人工智能",
+    stage: "Pre-A轮",
+    monthlyRevenue: "80万",
+    growth: "+65%",
+    teamSize: 12,
+    highlights: ["前字节AI Lab核心成员创立", "月活企业用户500+", "获得微软加速器支持"],
+    aiScore: 95,
+  },
+  {
+    id: "fp-2",
+    name: "碳未来",
+    founder: "赵思涵",
+    founderAge: 26,
+    tagline: "用卫星遥感+AI实现全球碳排放实时监测与碳资产管理",
+    industry: "新能源",
+    stage: "A轮",
+    monthlyRevenue: "120万",
+    growth: "+45%",
+    teamSize: 20,
+    highlights: ["清华系团队", "已签约30+上市公司", "碳交易平台数据合作"],
+    aiScore: 91,
+  },
+  {
+    id: "fp-3",
+    name: "味知AI",
+    founder: "张逸飞",
+    founderAge: 23,
+    tagline: "AI味觉模型驱动的食品研发平台，3天完成传统3个月的产品开发",
+    industry: "消费品牌",
+    stage: "天使轮",
+    monthlyRevenue: "15万",
+    growth: "+120%",
+    teamSize: 6,
+    highlights: ["已为瑞幸、元气森林做配方研发", "全球首个味觉AI大模型", "MIT食品科学博士创立"],
+    aiScore: 88,
+  },
+  {
+    id: "fp-4",
+    name: "灵境医疗",
+    founder: "孙启明",
+    founderAge: 27,
+    tagline: "多模态AI辅助诊断系统，让基层医院也有三甲水平的诊断能力",
+    industry: "医疗健康",
+    stage: "A轮",
+    monthlyRevenue: "200万",
+    growth: "+35%",
+    teamSize: 30,
+    highlights: ["获NMPA二类医疗器械认证", "覆盖1200+基层医院", "影像诊断准确率99.2%"],
+    aiScore: 93,
+  },
+  {
+    id: "fp-5",
+    name: "DeepRoute",
+    founder: "陈奕然",
+    founderAge: 25,
+    tagline: "端到端自动驾驶物流方案，让每辆货车都变成无人车",
+    industry: "硬件/IoT",
+    stage: "Pre-A轮",
+    monthlyRevenue: "60万",
+    growth: "+55%",
+    teamSize: 18,
+    highlights: ["L4级自动驾驶方案成本降低80%", "已在3个港口完成商用部署", "前Waymo中国团队核心成员"],
+    aiScore: 90,
+  },
+  {
+    id: "fp-6",
+    name: "数链科技",
+    founder: "吴梦琪",
+    founderAge: 22,
+    tagline: "AI驱动的供应链金融平台，让中小企业30分钟获得融资",
+    industry: "金融科技",
+    stage: "天使轮",
+    monthlyRevenue: "25万",
+    growth: "+90%",
+    teamSize: 8,
+    highlights: ["上线3个月累计放款5000万", "坏账率仅0.3%", "获蚂蚁集团战略合作意向"],
+    aiScore: 86,
+  },
+]
+
+export const successStories = [
+  { name: "马云", company: "阿里巴巴", year: "1999", note: "被30多个投资人拒绝后遇到蔡崇信" },
+  { name: "黄峥", company: "拼多多", year: "2015", note: "创立3年即上市，市值超千亿" },
+  { name: "汪滔", company: "大疆创新", year: "2006", note: "大学宿舍里诞生的全球无人机霸主" },
+  { name: "张一鸣", company: "字节跳动", year: "2012", note: "29岁创立，10年成为全球巨头" },
+  { name: "程维", company: "滴滴出行", year: "2012", note: "从阿里离职后改变中国出行方式" },
+]
+
 export const industries = [
   "人工智能",
   "企业服务",
