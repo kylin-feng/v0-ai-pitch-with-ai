@@ -13,33 +13,25 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { industries } from "@/lib/mock-data"
-import type { FounderProfile } from "@/lib/types"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import type { FounderProfile, SecondMeUserProfile, SecondMeShade } from "@/lib/types"
+import { ArrowLeft, ArrowRight, User } from "lucide-react"
 
 interface FounderFormProps {
   onSubmit: (profile: FounderProfile) => void
   onBack: () => void
+  user?: SecondMeUserProfile | null
+  shades?: SecondMeShade[]
 }
 
-export function FounderForm({ onSubmit, onBack }: FounderFormProps) {
-  const [projectName, setProjectName] = useState("")
+export function FounderForm({ onSubmit, onBack, user, shades = [] }: FounderFormProps) {
   const [oneLiner, setOneLiner] = useState("")
-  const [industry, setIndustry] = useState("")
-  const [fundingAmount, setFundingAmount] = useState([1000])
-  const [userCount, setUserCount] = useState("")
-  const [revenue, setRevenue] = useState("")
 
-  const isValid = projectName && oneLiner && industry
+  const isValid = oneLiner
 
   function handleSubmit() {
     if (!isValid) return
     onSubmit({
-      projectName,
       oneLiner,
-      industry,
-      fundingAmount: fundingAmount[0],
-      userCount,
-      revenue,
     })
   }
 
@@ -64,18 +56,48 @@ export function FounderForm({ onSubmit, onBack }: FounderFormProps) {
           </p>
         </div>
 
+        {/* User Info Card */}
+        {user && (
+          <div className="mb-6 flex items-center gap-4 rounded-xl border border-border bg-card/50 p-4">
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+            )}
+            <div className="flex-1">
+              <p className="font-semibold">{user.name}</p>
+              {user.bio && (
+                <p className="text-sm text-muted-foreground line-clamp-1">{user.bio}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* User Shades/Tags */}
+        {shades.length > 0 && (
+          <div className="mb-6">
+            <p className="text-sm text-muted-foreground mb-2">{"您的兴趣标签"}</p>
+            <div className="flex flex-wrap gap-2">
+              {shades.slice(0, 6).map((shade, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                >
+                  {shade.tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <div className="flex flex-col gap-5 rounded-xl border border-border bg-card p-6">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="projectName">{"项目名称"}</Label>
-            <Input
-              id="projectName"
-              placeholder="例如：智能招聘助手"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-            />
-          </div>
-
           <div className="flex flex-col gap-2">
             <Label htmlFor="oneLiner">{"一句话介绍"}</Label>
             <Input
@@ -83,66 +105,8 @@ export function FounderForm({ onSubmit, onBack }: FounderFormProps) {
               placeholder="例如：用AI重新定义企业招聘流程"
               value={oneLiner}
               onChange={(e) => setOneLiner(e.target.value)}
+              className="h-12"
             />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label>{"所属行业"}</Label>
-            <Select value={industry} onValueChange={setIndustry}>
-              <SelectTrigger>
-                <SelectValue placeholder="选择行业" />
-              </SelectTrigger>
-              <SelectContent>
-                {industries.map((ind) => (
-                  <SelectItem key={ind} value={ind}>
-                    {ind}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <Label>{"融资金额"}</Label>
-              <span className="text-sm font-medium text-primary">
-                {fundingAmount[0] >= 10000
-                  ? `${(fundingAmount[0] / 10000).toFixed(1)}亿`
-                  : `${fundingAmount[0]}万`}
-              </span>
-            </div>
-            <Slider
-              value={fundingAmount}
-              onValueChange={setFundingAmount}
-              min={100}
-              max={50000}
-              step={100}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{"100万"}</span>
-              <span>{"5亿"}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="userCount">{"用户数"}</Label>
-              <Input
-                id="userCount"
-                placeholder="例如：10万+"
-                value={userCount}
-                onChange={(e) => setUserCount(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="revenue">{"月营收"}</Label>
-              <Input
-                id="revenue"
-                placeholder="例如：50万"
-                value={revenue}
-                onChange={(e) => setRevenue(e.target.value)}
-              />
-            </div>
           </div>
         </div>
 
@@ -153,7 +117,7 @@ export function FounderForm({ onSubmit, onBack }: FounderFormProps) {
           disabled={!isValid}
           onClick={handleSubmit}
         >
-          {"开始AI匹配"}
+          {"保存项目"}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

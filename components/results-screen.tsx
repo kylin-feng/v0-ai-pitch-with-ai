@@ -45,14 +45,28 @@ export function ResultsScreen({
 
         {/* Match Cards */}
         <div className="flex flex-col gap-4">
-          {matches.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              role={role}
-              onViewChat={onViewChat}
-            />
-          ))}
+          {matches.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <Target className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">暂无匹配结果</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                {role === "founder"
+                  ? "目前没有符合条件的投资人，请等待更多投资人加入平台，或调整您的项目信息"
+                  : "目前没有符合您投资偏好的项目，请等待更多创业者加入平台，或调整您的投资偏好"}
+              </p>
+            </div>
+          ) : (
+            matches.map((match) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                role={role}
+                onViewChat={onViewChat}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>

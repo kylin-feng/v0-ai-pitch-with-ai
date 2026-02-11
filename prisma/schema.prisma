@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// SecondMe 用户
+model User {
+  id            String    @id @default(cuid())
+  secondMeId    String    @unique // SecondMe 用户 ID
+  name          String
+  email         String?
+  avatar        String?
+  bio           String?   @db.Text
+  selfIntro     String?   @db.Text
+  route         String?   // SecondMe profile route
+  role          String?   // founder 或 investor
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 用户的项目（创业者）
+  projects      Project[]
+  // 用户的投资偏好（投资人）
+  investorProfile InvestorPreference?
+  // 用户的兴趣标签
+  shades        UserShade[]
+  // 匹配记录
+  matchesAsFounder  Match[] @relation("FounderMatches")
+  matchesAsInvestor Match[] @relation("InvestorMatches")
+}
+
+// 用户兴趣标签
+model UserShade {
+  id          String  @id @default(cuid())
+  userId      String
+  tag         String
+  confidence  Float   @default(0)
+  description String? @db.Text
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 创业项目
+model Project {
+  id            String   @id @default(cuid())
+  userId        String
+  oneLiner      String   @db.Text
+  status        String   @default("active") // active, matched, closed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matches       Match[]
+
+  @@index([userId])
+}
+
+// 投资人偏好
+model InvestorPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  oneLiner        String   @db.Text // 一句话描述想投什么项目
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// 匹配记录
+model Match {
+  id            String   @id @default(cuid())
+  projectId     String
+  founderId     String
+  investorId    String
+  score         Float    // 匹配分数
+  highlights    String   @db.Text // JSON 数组
+  risks         String   @db.Text // JSON 数组
+  status        String   @default("pending") // pending, accepted, rejected
+  chatRounds    Int      @default(0)
+  conversation  String   @db.LongText // JSON 数组
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  founder       User     @relation("FounderMatches", fields: [founderId], references: [id], onDelete: Cascade)
+  investor      User     @relation("InvestorMatches", fields: [investorId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([founderId])
+  @@index([investorId])
+}

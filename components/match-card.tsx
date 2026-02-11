@@ -6,10 +6,10 @@ import { ScoreRing } from "@/components/score-ring"
 import type { MatchResult, Role } from "@/lib/types"
 import {
   MessageSquare,
-  Calendar,
-  Download,
   CheckCircle2,
   AlertTriangle,
+  ExternalLink,
+  XCircle,
 } from "lucide-react"
 
 interface MatchCardProps {
@@ -20,12 +20,43 @@ interface MatchCardProps {
 
 export function MatchCard({ match, role, onViewChat }: MatchCardProps) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/30">
+    <div className={`rounded-xl border bg-card overflow-hidden transition-all hover:border-primary/30 ${
+      match.matched ? "border-accent/50" : "border-border"
+    }`}>
+      {/* Match Status Banner */}
+      {match.matched !== undefined && (
+        <div className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${
+          match.matched
+            ? "bg-accent/10 text-accent"
+            : "bg-muted text-muted-foreground"
+        }`}>
+          {match.matched ? (
+            <>
+              <CheckCircle2 className="h-4 w-4" />
+              {"AI 对话匹配成功"}
+            </>
+          ) : (
+            <>
+              <XCircle className="h-4 w-4" />
+              {"暂未匹配"}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start gap-4 p-5 pb-0">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 font-display font-bold text-primary text-lg">
-          {match.avatar}
-        </div>
+        {match.avatar?.startsWith("http") ? (
+          <img
+            src={match.avatar}
+            alt={match.name}
+            className="h-12 w-12 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 font-display font-bold text-primary text-lg">
+            {match.avatar || match.name?.slice(0, 2)}
+          </div>
+        )}
         <div className="flex flex-1 flex-col gap-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-display font-semibold text-base truncate">
@@ -93,14 +124,27 @@ export function MatchCard({ match, role, onViewChat }: MatchCardProps) {
           <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
           {"查看对话"}
         </Button>
-        <Button variant="secondary" size="sm" className="flex-1">
-          <Calendar className="mr-1.5 h-3.5 w-3.5" />
-          {"约见面"}
-        </Button>
-        <Button variant="outline" size="sm">
-          <Download className="h-3.5 w-3.5" />
-          <span className="sr-only">{"下载PDF"}</span>
-        </Button>
+        {match.matched && match.route ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            asChild
+          >
+            <a
+              href={`https://second.me/${match.route}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              {"联系对方"}
+            </a>
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" className="flex-1" disabled>
+            {"暂无联系方式"}
+          </Button>
+        )}
       </div>
     </div>
   )

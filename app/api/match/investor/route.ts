@@ -1,298 +1,284 @@
 import { NextRequest, NextResponse } from "next/server"
+import { cookies } from "next/headers"
+import { prisma } from "@/lib/prisma"
+import { chatWithSecondMe } from "@/lib/secondme"
 import type { InvestorProfile, MatchResult, ChatMessage } from "@/lib/types"
 
-// 模拟创业者项目数据库
-const founderDatabase = [
-  {
-    id: "fnd-1",
-    name: "陈思远",
-    org: "AI招聘助手",
-    avatar: "CS",
-    projectName: "AI招聘助手",
-    oneLiner: "用AI重新定义企业招聘流程",
-    industry: "人工智能",
-    fundingAmount: 1500,
-    userCount: "200+企业客户",
-    revenue: "50万",
-    stage: "Pre-A轮",
-    teamBackground: "团队核心成员来自字节跳动和阿里巴巴",
-    metrics: { mrr: 50, growth: 40, retention: 78 },
-  },
-  {
-    id: "fnd-2",
-    name: "王思琪",
-    org: "智能客服大脑",
-    avatar: "WS",
-    projectName: "智能客服大脑",
-    oneLiner: "AI驱动的金融行业智能客服解决方案",
-    industry: "金融科技",
-    fundingAmount: 2000,
-    userCount: "2家头部银行PoC",
-    revenue: "15万",
-    stage: "Pre-A轮",
-    teamBackground: "团队有两位来自银保监体系的合规专家",
-    metrics: { mrr: 15, growth: 60, retention: 85 },
-  },
-  {
-    id: "fnd-3",
-    name: "李明辉",
-    org: "医学影像AI",
-    avatar: "LM",
-    projectName: "医学影像AI",
-    oneLiner: "用深度学习提升医学影像诊断效率",
-    industry: "医疗健康",
-    fundingAmount: 3000,
-    userCount: "15家三甲医院",
-    revenue: "80万",
-    stage: "A轮",
-    teamBackground: "CEO为斯坦福博士，CTO来自谷歌健康",
-    metrics: { mrr: 80, growth: 35, retention: 92 },
-  },
-  {
-    id: "fnd-4",
-    name: "张雅琳",
-    org: "跨境电商SaaS",
-    avatar: "ZY",
-    projectName: "跨境电商SaaS",
-    oneLiner: "一站式跨境电商运营管理平台",
-    industry: "电子商务",
-    fundingAmount: 1000,
-    userCount: "500+卖家",
-    revenue: "30万",
-    stage: "天使轮",
-    teamBackground: "团队有10年跨境电商运营经验",
-    metrics: { mrr: 30, growth: 50, retention: 70 },
-  },
-  {
-    id: "fnd-5",
-    name: "刘浩然",
-    org: "新能源电池回收",
-    avatar: "LH",
-    projectName: "新能源电池回收",
-    oneLiner: "动力电池梯次利用和回收解决方案",
-    industry: "新能源",
-    fundingAmount: 5000,
-    userCount: "3家车企合作",
-    revenue: "200万",
-    stage: "A轮",
-    teamBackground: "团队来自宁德时代和比亚迪",
-    metrics: { mrr: 200, growth: 25, retention: 95 },
-  },
-  {
-    id: "fnd-6",
-    name: "周小峰",
-    org: "智能财务机器人",
-    avatar: "ZX",
-    projectName: "智能财务机器人",
-    oneLiner: "AI自动化企业财务流程",
-    industry: "企业服务",
-    fundingAmount: 800,
-    userCount: "100+中小企业",
-    revenue: "20万",
-    stage: "天使轮",
-    teamBackground: "团队来自四大会计师事务所",
-    metrics: { mrr: 20, growth: 45, retention: 75 },
-  },
-]
-
-// 计算匹配分数
-function calculateMatchScore(
-  investor: InvestorProfile,
-  founder: typeof founderDatabase[0]
-): number {
-  let score = 0
-
-  // 行业匹配 (40分)
-  if (investor.industries.includes(founder.industry)) {
-    score += 40
-  } else {
-    // 部分相关行业
-    const relatedIndustries: Record<string, string[]> = {
-      "人工智能": ["企业服务", "金融科技", "医疗健康"],
-      "企业服务": ["人工智能", "金融科技"],
-      "金融科技": ["人工智能", "企业服务"],
-      "医疗健康": ["人工智能"],
-    }
-    if (relatedIndustries[founder.industry]?.some(i => investor.industries.includes(i))) {
-      score += 20
-    }
-  }
-
-  // 阶段匹配 (30分)
-  if (investor.stage.includes(founder.stage)) {
-    score += 30
-  } else {
-    // 相邻阶段也给分
-    const stageOrder = ["天使轮", "Pre-A轮", "A轮", "B轮", "C轮及以上"]
-    const founderIdx = stageOrder.indexOf(founder.stage)
-    const hasAdjacent = investor.stage.some(s => {
-      const idx = stageOrder.indexOf(s)
-      return Math.abs(idx - founderIdx) === 1
-    })
-    if (hasAdjacent) score += 15
-  }
-
-  // 投资金额匹配 (20分)
-  const [minInvest, maxInvest] = investor.investmentRange
-  if (founder.fundingAmount >= minInvest && founder.fundingAmount <= maxInvest) {
-    score += 20
-  } else if (founder.fundingAmount >= minInvest * 0.5 && founder.fundingAmount <= maxInvest * 1.5) {
-    score += 10
-  }
-
-  // 数据质量加分 (10分)
-  if (founder.metrics.mrr >= 50) score += 5
-  if (founder.metrics.growth >= 30) score += 3
-  if (founder.metrics.retention >= 80) score += 2
-
-  // 添加一些随机性
-  score += Math.floor(Math.random() * 10) - 5
-
-  return Math.min(100, Math.max(0, score))
+// 生成时间戳
+function formatTime(baseTime: Date, minOffset: number): string {
+  const d = new Date(baseTime.getTime() + minOffset * 60000)
+  return d.toISOString().slice(0, 16).replace("T", " ")
 }
 
-// 生成亮点
-function generateHighlights(
-  investor: InvestorProfile,
-  founder: typeof founderDatabase[0],
-  score: number
-): string[] {
+// 投资人 AI 发言
+async function investorAISay(
+  accessToken: string,
+  investorOneLiner: string,
+  projectOneLiner: string,
+  existingMessages: ChatMessage[],
+  round: number
+): Promise<string> {
+  const context = existingMessages
+    .map((m) => `${m.role === "founder-ai" ? "创业者" : "投资人"}：${m.content}`)
+    .join("\n")
+
+  const prompts: Record<number, string> = {
+    1: `你是一位投资人AI，正在评估一个创业项目。
+你的投资偏好：${investorOneLiner}
+对方项目：${projectOneLiner}
+
+请用2-3句话开场，表达对项目的初步兴趣，并提出一个关于产品或市场的问题。`,
+
+    2: `你是一位投资人AI，正在与创业者深入沟通。
+你的投资偏好：${investorOneLiner}
+之前对话：
+${context}
+
+请针对创业者的回答，追问关于数据、商业模式或竞争优势的问题。2句话。`,
+
+    3: `你是一位投资人AI，这是最后一轮对话。
+你的投资偏好：${investorOneLiner}
+之前对话：
+${context}
+
+请给出你对这个项目的总体评价，并表明是否有兴趣进一步沟通。2-3句话。
+如果感兴趣，请说"希望能进一步交流"；如果不太匹配，请委婉表达。`,
+  }
+
+  const result = await chatWithSecondMe(accessToken, prompts[round] || prompts[1])
+  return result || "感谢分享，我需要再考虑一下。"
+}
+
+// 创业者 AI 发言
+async function founderAISay(
+  accessToken: string,
+  projectOneLiner: string,
+  founderName: string,
+  existingMessages: ChatMessage[],
+  round: number
+): Promise<string> {
+  const lastInvestorMsg = existingMessages.filter(m => m.role === "investor-ai").pop()?.content || ""
+
+  const context = existingMessages
+    .map((m) => `${m.role === "founder-ai" ? "创业者" : "投资人"}：${m.content}`)
+    .join("\n")
+
+  const prompts: Record<number, string> = {
+    1: `你是创业者${founderName}的AI代表，正在向投资人介绍项目。
+你的项目：${projectOneLiner}
+投资人问：${lastInvestorMsg}
+
+请专业地回答投资人的问题，突出项目优势。2-3句话。`,
+
+    2: `你是创业者${founderName}的AI代表。
+你的项目：${projectOneLiner}
+之前对话：
+${context}
+投资人问：${lastInvestorMsg}
+
+请用具体的数据或案例回答，展示项目实力。2-3句话。`,
+
+    3: `你是创业者${founderName}的AI代表，这是最后一轮对话。
+你的项目：${projectOneLiner}
+之前对话：
+${context}
+投资人说：${lastInvestorMsg}
+
+请总结项目价值，并表达合作意愿。如果投资人表示有兴趣，请积极回应；如果不太匹配，也礼貌感谢。2-3句话。`,
+  }
+
+  const result = await chatWithSecondMe(accessToken, prompts[round] || prompts[1])
+  return result || "感谢您的关注，期待有机会进一步交流。"
+}
+
+// 计算投资偏好与项目的初始相关性分数
+function calculateRelevanceScore(investorOneLiner: string, projectOneLiner: string): number {
+  const investorKeywords = investorOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
+  const projectKeywords = projectOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
+
+  let matchCount = 0
+  for (const iw of investorKeywords) {
+    for (const pw of projectKeywords) {
+      if (iw.includes(pw) || pw.includes(iw)) {
+        matchCount++
+      }
+    }
+  }
+
+  const baseScore = 50
+  const keywordBonus = Math.min(matchCount * 10, 40)
+  const randomBonus = Math.floor(Math.random() * 10)
+
+  return baseScore + keywordBonus + randomBonus
+}
+
+// 评估对话结果，判断是否匹配
+function evaluateMatch(conversation: ChatMessage[]): { matched: boolean; score: number; highlights: string[]; risks: string[] } {
+  const lastInvestorMsg = conversation.filter(m => m.role === "investor-ai").pop()?.content || ""
+
+  // 基于最后一轮投资人的回复判断是否匹配
+  const positiveKeywords = ["兴趣", "交流", "沟通", "合作", "不错", "看好", "有潜力", "期待", "安排", "详谈"]
+  const negativeKeywords = ["不太", "暂时", "考虑", "再看", "不匹配", "方向不同"]
+
+  let positiveScore = 0
+  let negativeScore = 0
+
+  positiveKeywords.forEach(keyword => {
+    if (lastInvestorMsg.includes(keyword)) positiveScore++
+  })
+
+  negativeKeywords.forEach(keyword => {
+    if (lastInvestorMsg.includes(keyword)) negativeScore++
+  })
+
+  const matched = positiveScore > negativeScore
+  const score = Math.min(95, Math.max(50, 70 + (positiveScore - negativeScore) * 5))
+
   const highlights: string[] = []
-
-  if (founder.metrics.mrr >= 30) {
-    highlights.push(`月营收${founder.revenue}，${founder.metrics.growth > 30 ? "增长势头强劲" : "稳步增长中"}`)
-  }
-
-  highlights.push(founder.teamBackground)
-
-  if (founder.metrics.retention >= 80) {
-    highlights.push(`用户留存率${founder.metrics.retention}%，产品粘性强`)
-  }
-
-  if (score >= 80) {
-    highlights.push("AI对话中回答专业且数据详实")
-  }
-
-  if (founder.userCount) {
-    highlights.push(`已服务${founder.userCount}`)
-  }
-
-  return highlights.slice(0, 4)
-}
-
-// 生成风险点
-function generateRisks(
-  investor: InvestorProfile,
-  founder: typeof founderDatabase[0]
-): string[] {
   const risks: string[] = []
 
-  if (founder.metrics.mrr < 30) {
-    risks.push("当前营收规模较小，需要持续验证")
+  if (matched) {
+    highlights.push("AI对话顺利，双方意向匹配")
+    if (positiveScore >= 2) highlights.push("投资人表现出强烈兴趣")
+  } else {
+    risks.push("投资方向可能存在差异")
   }
 
-  if (founder.metrics.growth < 30) {
-    risks.push("增长速度可能需要进一步提升")
-  }
-
-  if (!investor.stage.includes(founder.stage)) {
-    risks.push("融资阶段与您的偏好略有差异")
-  }
-
-  risks.push("赛道竞争需要持续关注")
-
-  return risks.slice(0, 2)
-}
-
-// 生成模拟对话
-function generateConversation(
-  investor: InvestorProfile,
-  founder: typeof founderDatabase[0]
-): ChatMessage[] {
-  const now = new Date()
-  const formatTime = (minOffset: number) => {
-    const d = new Date(now.getTime() + minOffset * 60000)
-    return d.toISOString().slice(0, 16).replace("T", " ")
-  }
-
-  return [
-    {
-      role: "investor-ai",
-      content: `你好，我们了解到你们在做${founder.industry}方向。这个赛道我们一直在关注，能介绍一下你们的差异化优势吗？`,
-      timestamp: formatTime(0),
-    },
-    {
-      role: "founder-ai",
-      content: `您好！${founder.oneLiner}。我们的核心壁垒在于${founder.teamBackground}，目前已经${founder.userCount}验证，这是后来者很难复制的优势。`,
-      timestamp: formatTime(3),
-    },
-    {
-      role: "investor-ai",
-      content: "技术壁垒听起来不错。能分享下关键业务指标吗？月营收、增长率、留存这些。",
-      timestamp: formatTime(6),
-    },
-    {
-      role: "founder-ai",
-      content: `目前月营收${founder.revenue}，连续多月保持${founder.metrics.growth}%+增长。客户留存率${founder.metrics.retention}%，复购意愿强烈。`,
-      timestamp: formatTime(9),
-    },
-    {
-      role: "investor-ai",
-      content: `数据表现${founder.metrics.mrr >= 50 ? "非常扎实" : "有潜力"}。你们怎么看竞争格局？`,
-      timestamp: formatTime(12),
-    },
-    {
-      role: "founder-ai",
-      content: `我们的优势在于垂直领域的深度积累。通用解决方案在专业场景的效果远不如我们的垂直方案。而且我们已经在建立数据和客户网络效应。`,
-      timestamp: formatTime(15),
-    },
-    {
-      role: "investor-ai",
-      content: `方向不错，${founder.metrics.mrr >= 50 ? "建议安排详细的产品演示和团队沟通" : "建议后续持续关注业务进展"}。`,
-      timestamp: formatTime(18),
-    },
-  ]
+  return { matched, score, highlights, risks }
 }
 
 export async function POST(request: NextRequest) {
+  console.log("=== Match Investor API Called ===")
   try {
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get("secondme_access_token")?.value
+    console.log("Access token exists:", !!accessToken)
+
+    if (!accessToken) {
+      console.log("No access token, returning 401")
+      return NextResponse.json(
+        { error: "Not authenticated" },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const investorProfile = body as InvestorProfile
+    console.log("Investor profile:", investorProfile)
 
     // 验证必填字段
-    if (!investorProfile.industries?.length || !investorProfile.stage?.length) {
+    if (!investorProfile.oneLiner) {
+      console.log("Missing oneLiner, returning 400")
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       )
     }
 
-    // 计算每个创业者的匹配分数
-    const matchResults: MatchResult[] = founderDatabase
-      .map((founder) => {
-        const score = calculateMatchScore(investorProfile, founder)
-        const chatRounds = Math.floor(score / 15) + 3
+    // 从数据库获取所有活跃项目
+    console.log("Fetching active projects...")
+    const projects = await prisma.project.findMany({
+      where: {
+        status: "active",
+      },
+      include: {
+        user: true,
+      },
+    })
+    console.log("Found projects:", projects.length)
 
-        return {
-          id: founder.id,
-          name: founder.name,
-          org: founder.org,
-          avatar: founder.avatar,
-          score,
-          highlights: generateHighlights(investorProfile, founder, score),
-          risks: generateRisks(investorProfile, founder),
-          chatRounds,
-          conversation: generateConversation(investorProfile, founder),
-        }
+    if (projects.length === 0) {
+      console.log("No projects found, returning empty matches")
+      return NextResponse.json({
+        success: true,
+        matches: [],
+        totalMatched: 0,
+        message: "暂无匹配的创业项目，请等待更多创业者加入平台",
       })
-      .filter((match) => match.score >= 50)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
+    }
+
+    // 计算每个项目与投资偏好的相关性分数
+    const projectsWithScore = projects.map(project => ({
+      project,
+      relevanceScore: calculateRelevanceScore(investorProfile.oneLiner, project.oneLiner)
+    }))
+
+    // 按相关性分数排序，选择最相关的3个
+    projectsWithScore.sort((a, b) => b.relevanceScore - a.relevanceScore)
+    const projectsToMatch = projectsWithScore.slice(0, 3).map(p => p.project)
+    console.log("Matching with", projectsToMatch.length, "most relevant projects")
+
+    // 对每个项目进行 AI 对话匹配
+    const matchResults: MatchResult[] = []
+
+    for (const project of projectsToMatch) {
+      console.log("Processing project:", project.id, project.oneLiner.slice(0, 30))
+      const conversation: ChatMessage[] = []
+      const baseTime = new Date()
+
+      // 进行 3 轮对话
+      for (let round = 1; round <= 3; round++) {
+        console.log(`  Round ${round} starting...`)
+        // 投资人 AI 发言
+        const investorMsg = await investorAISay(
+          accessToken,
+          investorProfile.oneLiner,
+          project.oneLiner,
+          conversation,
+          round
+        )
+        console.log(`  Investor AI said: ${investorMsg.slice(0, 50)}...`)
+        conversation.push({
+          role: "investor-ai",
+          content: investorMsg,
+          timestamp: formatTime(baseTime, (round - 1) * 6),
+        })
+
+        // 创业者 AI 发言
+        const founderMsg = await founderAISay(
+          accessToken,
+          project.oneLiner,
+          project.user.name,
+          conversation,
+          round
+        )
+        console.log(`  Founder AI said: ${founderMsg.slice(0, 50)}...`)
+        conversation.push({
+          role: "founder-ai",
+          content: founderMsg,
+          timestamp: formatTime(baseTime, (round - 1) * 6 + 3),
+        })
+      }
+
+      console.log(`  Project ${project.id} done, ${conversation.length} messages`)
+      // 评估对话结果
+      const evaluation = evaluateMatch(conversation)
+
+      matchResults.push({
+        id: project.id,
+        name: project.user.name,
+        org: project.oneLiner.slice(0, 20) + "...",
+        avatar: project.user.avatar || project.user.name.slice(0, 2),
+        score: evaluation.score,
+        highlights: evaluation.highlights,
+        risks: evaluation.risks,
+        chatRounds: 3,
+        conversation,
+        matched: evaluation.matched,
+        route: evaluation.matched ? project.user.route || undefined : undefined,
+      })
+    }
+
+    // 按匹配成功优先，然后按分数排序
+    matchResults.sort((a, b) => {
+      if (a.matched !== b.matched) return b.matched ? 1 : -1
+      return b.score - a.score
+    })
 
     return NextResponse.json({
       success: true,
-      matches: matchResults,
-      totalMatched: matchResults.length,
+      matches: matchResults.slice(0, 10),
+      totalMatched: matchResults.filter(m => m.matched).length,
     })
   } catch (error) {
     console.error("Match error:", error)

@@ -21,8 +21,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     // 保存选择的角色到localStorage，OAuth回调后读取
     localStorage.setItem("pendingRole", selectedRole)
 
-    // 跳转到Second Me OAuth授权页面
-    window.location.href = "/api/auth/authorize"
+    // 跳转到Second Me OAuth授权页面，通过state参数传递角色
+    window.location.href = `/api/auth/authorize?role=${selectedRole}`
   }
 
   return (

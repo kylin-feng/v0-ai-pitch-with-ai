@@ -2,42 +2,31 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { industries, stages } from "@/lib/mock-data"
-import type { InvestorProfile } from "@/lib/types"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import type { InvestorProfile, SecondMeUserProfile, SecondMeShade } from "@/lib/types"
+import { ArrowLeft, ArrowRight, User } from "lucide-react"
 
 interface InvestorFormProps {
   onSubmit: (profile: InvestorProfile) => void
   onBack: () => void
+  user?: SecondMeUserProfile | null
+  shades?: SecondMeShade[]
 }
 
-export function InvestorForm({ onSubmit, onBack }: InvestorFormProps) {
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
-  const [selectedStages, setSelectedStages] = useState<string[]>([])
-  const [investRange, setInvestRange] = useState([500, 5000])
+export function InvestorForm({ onSubmit, onBack, user, shades = [] }: InvestorFormProps) {
+  const [oneLiner, setOneLiner] = useState("")
 
-  const isValid = selectedIndustries.length > 0 && selectedStages.length > 0
+  const isValid = oneLiner
 
-  function toggleIndustry(ind: string) {
-    setSelectedIndustries((prev) =>
-      prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind]
-    )
-  }
 
-  function toggleStage(stage: string) {
-    setSelectedStages((prev) =>
-      prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage]
-    )
-  }
 
   function handleSubmit() {
     if (!isValid) return
     onSubmit({
-      industries: selectedIndustries,
-      stage: selectedStages,
-      investmentRange: [investRange[0], investRange[1]],
+      oneLiner,
     })
   }
 
@@ -62,75 +51,61 @@ export function InvestorForm({ onSubmit, onBack }: InvestorFormProps) {
           </p>
         </div>
 
+        {/* User Info Card */}
+        {user && (
+          <div className="mb-6 flex items-center gap-4 rounded-xl border border-border bg-card/50 p-4">
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+                <User className="h-6 w-6 text-accent" />
+              </div>
+            )}
+            <div className="flex-1">
+              <p className="font-semibold">{user.name}</p>
+              {user.bio && (
+                <p className="text-sm text-muted-foreground line-clamp-1">{user.bio}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* User Shades/Tags */}
+        {shades.length > 0 && (
+          <div className="mb-6">
+            <p className="text-sm text-muted-foreground mb-2">{"您的兴趣标签"}</p>
+            <div className="flex flex-wrap gap-2">
+              {shades.slice(0, 6).map((shade, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent"
+                >
+                  {shade.tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <div className="flex flex-col gap-6 rounded-xl border border-border bg-card p-6">
-          {/* Industries */}
-          <div className="flex flex-col gap-3">
-            <Label>{"关注行业（可多选）"}</Label>
-            <div className="flex flex-wrap gap-2">
-              {industries.map((ind) => (
-                <button
-                  key={ind}
-                  type="button"
-                  onClick={() => toggleIndustry(ind)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
-                    selectedIndustries.includes(ind)
-                      ? "border-primary bg-primary/15 text-primary"
-                      : "border-border bg-secondary text-muted-foreground hover:text-foreground hover:border-primary/40"
-                  }`}
-                >
-                  {ind}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Stages */}
-          <div className="flex flex-col gap-3">
-            <Label>{"投资阶段（可多选）"}</Label>
-            <div className="flex flex-wrap gap-2">
-              {stages.map((stage) => (
-                <button
-                  key={stage}
-                  type="button"
-                  onClick={() => toggleStage(stage)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
-                    selectedStages.includes(stage)
-                      ? "border-accent bg-accent/15 text-accent"
-                      : "border-border bg-secondary text-muted-foreground hover:text-foreground hover:border-accent/40"
-                  }`}
-                >
-                  {stage}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Investment Range */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <Label>{"单笔投资范围"}</Label>
-              <span className="text-sm font-medium text-primary">
-                {investRange[0] >= 10000
-                  ? `${(investRange[0] / 10000).toFixed(1)}亿`
-                  : `${investRange[0]}万`}
-                {" - "}
-                {investRange[1] >= 10000
-                  ? `${(investRange[1] / 10000).toFixed(1)}亿`
-                  : `${investRange[1]}万`}
-              </span>
-            </div>
-            <Slider
-              value={investRange}
-              onValueChange={setInvestRange}
-              min={100}
-              max={50000}
-              step={100}
+          {/* One Liner */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="oneLiner">{"一句话描述"}</Label>
+            <Input
+              id="oneLiner"
+              placeholder="例如：我想投资具有创新技术的早期AI项目"
+              value={oneLiner}
+              onChange={(e) => setOneLiner(e.target.value)}
+              className="h-12"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{"100万"}</span>
-              <span>{"5亿"}</span>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              {"简短描述您想投资的项目类型"}
+            </p>
           </div>
         </div>
 
@@ -141,7 +116,7 @@ export function InvestorForm({ onSubmit, onBack }: InvestorFormProps) {
           disabled={!isValid}
           onClick={handleSubmit}
         >
-          {"开始AI匹配"}
+          {"保存偏好"}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
