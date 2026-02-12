@@ -203,9 +203,9 @@ export async function POST(request: NextRequest) {
       relevanceScore: calculateRelevanceScore(investorProfile.oneLiner, project.oneLiner)
     }))
 
-    // 按相关性分数排序，选择最相关的3个
+    // 按相关性分数排序，选择最相关的1个
     projectsWithScore.sort((a, b) => b.relevanceScore - a.relevanceScore)
-    const projectsToMatch = projectsWithScore.slice(0, 3).map(p => p.project)
+    const projectsToMatch = projectsWithScore.slice(0, 1).map(p => p.project)
     console.log("Matching with", projectsToMatch.length, "most relevant projects")
 
     // 对每个项目进行 AI 对话匹配

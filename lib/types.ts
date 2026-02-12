@@ -19,7 +19,13 @@ export interface SecondMeShade {
 }
 
 export interface FounderProfile {
+  projectName?: string
   oneLiner: string
+  industry?: string
+  fundingAmount?: number
+  userCount?: string
+  revenue?: string
+  name?: string // 创业者姓名
 }
 
 export interface InvestorProfile {

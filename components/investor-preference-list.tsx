@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Plus, Briefcase, ChevronRight } from "lucide-react"
+import { ArrowLeft, Plus, Briefcase, ChevronRight, Building2 } from "lucide-react"
 
 interface InvestorPreferenceData {
   id: string
@@ -15,6 +15,7 @@ interface InvestorPreferenceListProps {
   onSelectPreference: (preference: InvestorPreferenceData) => void
   onCreateNew: () => void
   onBack: () => void
+  onBrowseProjects?: () => void
   userName?: string
 }
 
@@ -23,6 +24,7 @@ export function InvestorPreferenceList({
   onSelectPreference,
   onCreateNew,
   onBack,
+  onBrowseProjects,
   userName,
 }: InvestorPreferenceListProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -122,12 +124,25 @@ export function InvestorPreferenceList({
         <Button
           variant="outline"
           size="lg"
-          className="w-full text-base"
+          className="w-full text-base mb-3"
           onClick={onCreateNew}
         >
           <Plus className="mr-2 h-4 w-4" />
           {"设置新投资偏好"}
         </Button>
+
+        {/* Browse Projects Button */}
+        {onBrowseProjects && (
+          <Button
+            variant="ghost"
+            size="lg"
+            className="w-full text-base"
+            onClick={onBrowseProjects}
+          >
+            <Building2 className="mr-2 h-4 w-4" />
+            {"浏览创业项目"}
+          </Button>
+        )}
       </div>
     </div>
   )

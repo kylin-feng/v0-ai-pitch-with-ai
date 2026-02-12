@@ -23,12 +23,14 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("OAuth error:", error)
-    return NextResponse.redirect(new URL("/?auth_error=" + error, request.url))
+    const baseUrl = process.env.NEXTAUTH_URL || request.url
+    return NextResponse.redirect(new URL("/?auth_error=" + error, baseUrl))
   }
 
   if (!code) {
     console.error("No code received")
-    return NextResponse.redirect(new URL("/?auth_error=no_code", request.url))
+    const baseUrl = process.env.NEXTAUTH_URL || request.url
+    return NextResponse.redirect(new URL("/?auth_error=no_code", baseUrl))
   }
 
   try {
@@ -37,7 +39,8 @@ export async function GET(request: NextRequest) {
     console.log("Token exchange result:", tokenData ? "success" : "failed")
 
     if (!tokenData) {
-      return NextResponse.redirect(new URL("/?auth_error=token_failed", request.url))
+      const baseUrl = process.env.NEXTAUTH_URL || request.url
+      return NextResponse.redirect(new URL("/?auth_error=token_failed", baseUrl))
     }
 
     // Store tokens in HTTP-only cookies
@@ -64,12 +67,14 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("Token stored, redirecting to success")
+    const baseUrl = process.env.NEXTAUTH_URL || request.url
     const successUrl = role
       ? `/?auth_success=true&role=${role}`
       : "/?auth_success=true"
-    return NextResponse.redirect(new URL(successUrl, request.url))
+    return NextResponse.redirect(new URL(successUrl, baseUrl))
   } catch (error) {
     console.error("OAuth callback error:", error)
-    return NextResponse.redirect(new URL("/?auth_error=server_error", request.url))
+    const baseUrl = process.env.NEXTAUTH_URL || request.url
+    return NextResponse.redirect(new URL("/?auth_error=server_error", baseUrl))
   }
 }

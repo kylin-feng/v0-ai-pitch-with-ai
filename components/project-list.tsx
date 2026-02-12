@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Plus, Rocket, ChevronRight } from "lucide-react"
+import { ArrowLeft, Plus, Rocket, ChevronRight, Users } from "lucide-react"
 
 interface Project {
   id: string
@@ -16,6 +16,7 @@ interface ProjectListProps {
   onSelectProject: (project: Project) => void
   onCreateNew: () => void
   onBack: () => void
+  onBrowseInvestors?: () => void
   userName?: string
 }
 
@@ -24,6 +25,7 @@ export function ProjectList({
   onSelectProject,
   onCreateNew,
   onBack,
+  onBrowseInvestors,
   userName,
 }: ProjectListProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -115,12 +117,25 @@ export function ProjectList({
         <Button
           variant="outline"
           size="lg"
-          className="w-full text-base"
+          className="w-full text-base mb-3"
           onClick={onCreateNew}
         >
           <Plus className="mr-2 h-4 w-4" />
           {"创建新项目"}
         </Button>
+
+        {/* Browse Investors Button */}
+        {onBrowseInvestors && (
+          <Button
+            variant="ghost"
+            size="lg"
+            className="w-full text-base"
+            onClick={onBrowseInvestors}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            {"浏览投资人"}
+          </Button>
+        )}
       </div>
     </div>
   )

@@ -28,8 +28,16 @@ export function ChatDetail({ match, onBack }: ChatDetailProps) {
 
           <div className="flex items-center justify-between rounded-xl border border-border bg-card p-5">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 font-display font-bold text-primary text-lg">
-                {match.avatar}
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 font-display font-bold text-primary text-lg overflow-hidden">
+                {match.avatar && (match.avatar.startsWith('http') || match.avatar.startsWith('/')) ? (
+                  <img
+                    src={match.avatar}
+                    alt={match.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>{match.avatar || match.name.slice(0, 2)}</span>
+                )}
               </div>
               <div>
                 <h1 className="font-display text-lg font-bold">

@@ -2,51 +2,12 @@ import { NextRequest } from "next/server"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { chatWithSecondMe } from "@/lib/secondme"
-import type { InvestorProfile, ChatMessage } from "@/lib/types"
+import type { FounderProfile, ChatMessage } from "@/lib/types"
 
 // 生成时间戳
 function formatTime(baseTime: Date, minOffset: number): string {
   const d = new Date(baseTime.getTime() + minOffset * 60000)
   return d.toISOString().slice(0, 16).replace("T", " ")
-}
-
-// 投资人 AI 发言
-async function investorAISay(
-  accessToken: string,
-  investorOneLiner: string,
-  projectOneLiner: string,
-  existingMessages: ChatMessage[],
-  round: number
-): Promise<string> {
-  const context = existingMessages
-    .map((m) => `${m.role === "founder-ai" ? "创业者" : "投资人"}：${m.content}`)
-    .join("\n")
-
-  const prompts: Record<number, string> = {
-    1: `你是一位投资人AI，正在评估一个创业项目。
-你的投资偏好：${investorOneLiner}
-对方项目：${projectOneLiner}
-
-请用2-3句话开场，表达对项目的初步兴趣，并提出一个关于产品或市场的问题。`,
-
-    2: `你是一位投资人AI，正在与创业者深入沟通。
-你的投资偏好：${investorOneLiner}
-之前对话：
-${context}
-
-请针对创业者的回答，追问关于数据、商业模式或竞争优势的问题。2句话。`,
-
-    3: `你是一位投资人AI，这是最后一轮对话。
-你的投资偏好：${investorOneLiner}
-之前对话：
-${context}
-
-请给出你对这个项目的总体评价，并表明是否有兴趣进一步沟通。2-3句话。
-如果感兴趣，请说"希望能进一步交流"；如果不太匹配，请委婉表达。`,
-  }
-
-  const result = await chatWithSecondMe(accessToken, prompts[round] || prompts[1])
-  return result || "感谢分享，我需要再考虑一下。"
 }
 
 // 创业者 AI 发言
@@ -66,11 +27,10 @@ async function founderAISay(
   const prompts: Record<number, string> = {
     1: `你是创业者${founderName}的AI代表，正在向投资人介绍项目。
 你的项目：${projectOneLiner}
-投资人问：${lastInvestorMsg}
 
-请专业地回答投资人的问题，突出项目优势。2-3句话。`,
+请用2-3句话开场，介绍项目核心价值，并询问投资人的投资偏好。`,
 
-    2: `你是创业者${founderName}的AI代表。
+    2: `你是创业者${founderName}的AI代表，正在与投资人深入沟通。
 你的项目：${projectOneLiner}
 之前对话：
 ${context}
@@ -91,34 +51,75 @@ ${context}
   return result || "感谢您的关注，期待有机会进一步交流。"
 }
 
-// 计算投资偏好与项目的初始相关性分数
-function calculateRelevanceScore(investorOneLiner: string, projectOneLiner: string): number {
-  const investorKeywords = investorOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
-  const projectKeywords = projectOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
+// 投资人 AI 发言
+async function investorAISay(
+  accessToken: string,
+  investorOneLiner: string,
+  projectOneLiner: string,
+  investorName: string,
+  existingMessages: ChatMessage[],
+  round: number
+): Promise<string> {
+  const lastFounderMsg = existingMessages.filter(m => m.role === "founder-ai").pop()?.content || ""
 
-  // 计算关键词重叠
+  const context = existingMessages
+    .map((m) => `${m.role === "founder-ai" ? "创业者" : "投资人"}：${m.content}`)
+    .join("\n")
+
+  const prompts: Record<number, string> = {
+    1: `你是投资人${investorName}的AI代表，正在评估一个创业项目。
+你的投资偏好：${investorOneLiner}
+对方项目：${projectOneLiner}
+
+请用2-3句话开场，表达对项目的初步兴趣，并提出一个关于产品或市场的问题。`,
+
+    2: `你是投资人${investorName}的AI代表，正在与创业者深入沟通。
+你的投资偏好：${investorOneLiner}
+之前对话：
+${context}
+创业者说：${lastFounderMsg}
+
+请针对创业者的回答，追问关于数据、商业模式或竞争优势的问题。2句话。`,
+
+    3: `你是投资人${investorName}的AI代表，这是最后一轮对话。
+你的投资偏好：${investorOneLiner}
+之前对话：
+${context}
+创业者说：${lastFounderMsg}
+
+请给出你对这个项目的总体评价，并表明是否有兴趣进一步沟通。2-3句话。
+如果感兴趣，请说"希望能进一步交流"；如果不太匹配，请委婉表达。`,
+  }
+
+  const result = await chatWithSecondMe(accessToken, prompts[round] || prompts[1])
+  return result || "感谢分享，我需要再考虑一下。"
+}
+
+// 计算项目与投资偏好的相关性分数
+function calculateRelevanceScore(projectOneLiner: string, investorOneLiner: string): number {
+  const projectKeywords = projectOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
+  const investorKeywords = investorOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
+
   let matchCount = 0
-  for (const iw of investorKeywords) {
-    for (const pw of projectKeywords) {
-      if (iw.includes(pw) || pw.includes(iw)) {
+  for (const pw of projectKeywords) {
+    for (const iw of investorKeywords) {
+      if (pw.includes(iw) || iw.includes(pw)) {
         matchCount++
       }
     }
   }
 
-  // 基础分数 + 关键词匹配加分
   const baseScore = 50
   const keywordBonus = Math.min(matchCount * 10, 40)
-
-  // 添加一些随机性，模拟更复杂的匹配
   const randomBonus = Math.floor(Math.random() * 10)
 
   return baseScore + keywordBonus + randomBonus
 }
 
-// 评估对话结果
+// 评估对话结果，判断是否匹配
 function evaluateMatch(conversation: ChatMessage[]): { matched: boolean; score: number; highlights: string[]; risks: string[] } {
   const lastInvestorMsg = conversation.filter(m => m.role === "investor-ai").pop()?.content || ""
+
   const positiveKeywords = ["兴趣", "交流", "沟通", "合作", "不错", "看好", "有潜力", "期待", "安排", "详谈"]
   const negativeKeywords = ["不太", "暂时", "考虑", "再看", "不匹配", "方向不同"]
 
@@ -128,6 +129,7 @@ function evaluateMatch(conversation: ChatMessage[]): { matched: boolean; score: 
   positiveKeywords.forEach(keyword => {
     if (lastInvestorMsg.includes(keyword)) positiveScore++
   })
+
   negativeKeywords.forEach(keyword => {
     if (lastInvestorMsg.includes(keyword)) negativeScore++
   })
@@ -160,9 +162,9 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const investorProfile = body as InvestorProfile
+  const founderProfile = body as FounderProfile
 
-  if (!investorProfile.oneLiner) {
+  if (!founderProfile.oneLiner) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -178,121 +180,135 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // 获取项目
-        send({ type: "status", message: "正在查找创业项目..." })
+        // 获取所有投资人
+        send({ type: "status", message: "正在查找投资人..." })
 
-        const projects = await prisma.project.findMany({
-          where: { status: "active" },
-          include: { user: true },
+        const investors = await prisma.user.findMany({
+          where: {
+            role: "investor",
+            investorProfile: { isNot: null },
+          },
+          include: {
+            investorProfile: true,
+          },
         })
 
-        if (projects.length === 0) {
-          send({ type: "complete", matches: [], totalMatched: 0, message: "暂无匹配的创业项目" })
+        if (investors.length === 0) {
+          send({ type: "complete", matches: [], totalMatched: 0, message: "暂无匹配的投资人，请等待更多投资人加入平台" })
           controller.close()
           return
         }
 
-        send({ type: "status", message: `找到 ${projects.length} 个项目，正在分析相关性...` })
+        send({ type: "status", message: `找到 ${investors.length} 位投资人，正在分析相关性...` })
 
-        // 计算每个项目与投资偏好的相关性分数
-        const projectsWithScore = projects.map(project => ({
-          project,
-          relevanceScore: calculateRelevanceScore(investorProfile.oneLiner, project.oneLiner)
-        }))
+        // 计算每个投资人与项目的相关性分数
+        const investorsWithScore = investors
+          .filter(inv => inv.investorProfile)
+          .map(investor => ({
+            investor,
+            relevanceScore: calculateRelevanceScore(
+              founderProfile.oneLiner,
+              investor.investorProfile!.oneLiner
+            )
+          }))
 
         // 按相关性分数排序，选择最相关的1个
-        projectsWithScore.sort((a, b) => b.relevanceScore - a.relevanceScore)
-        const projectsToMatch = projectsWithScore.slice(0, 1).map(p => p.project)
+        investorsWithScore.sort((a, b) => b.relevanceScore - a.relevanceScore)
+        const investorsToMatch = investorsWithScore.slice(0, 1).map(i => i.investor)
 
-        send({ type: "status", message: `已筛选出 ${projectsToMatch.length} 个最相关项目，开始 AI 对话匹配...` })
+        send({ type: "status", message: `已筛选出 ${investorsToMatch.length} 位最相关投资人，开始 AI 对话匹配...` })
         const matches: any[] = []
 
-        for (let i = 0; i < projectsToMatch.length; i++) {
-          const project = projectsToMatch[i]
+        for (let i = 0; i < investorsToMatch.length; i++) {
+          const investor = investorsToMatch[i]
+          if (!investor.investorProfile) continue
+
           const conversation: ChatMessage[] = []
           const baseTime = new Date()
 
           send({
-            type: "project_start",
-            projectIndex: i + 1,
-            totalProjects: projectsToMatch.length,
-            projectName: project.oneLiner.slice(0, 30) + "...",
-            founderName: project.user.name,
+            type: "investor_start",
+            investorIndex: i + 1,
+            totalInvestors: investorsToMatch.length,
+            investorName: investor.name,
+            investorOrg: investor.bio || "投资人",
           })
 
           // 3 轮对话
           for (let round = 1; round <= 3; round++) {
-            send({ type: "round_start", round, projectIndex: i + 1 })
+            send({ type: "round_start", round, investorIndex: i + 1 })
 
-            // 投资人 AI
-            const investorMsg = await investorAISay(
+            // 创业者 AI 发言
+            const founderMsg = await founderAISay(
               accessToken,
-              investorProfile.oneLiner,
-              project.oneLiner,
+              founderProfile.oneLiner,
+              founderProfile.name || "创业者",
               conversation,
               round
             )
             conversation.push({
-              role: "investor-ai",
-              content: investorMsg,
+              role: "founder-ai",
+              content: founderMsg,
               timestamp: formatTime(baseTime, (round - 1) * 6),
             })
             send({
               type: "message",
-              role: "investor-ai",
-              content: investorMsg,
+              role: "founder-ai",
+              content: founderMsg,
               round,
-              projectIndex: i + 1,
+              investorIndex: i + 1,
             })
 
-            // 创业者 AI
-            const founderMsg = await founderAISay(
+            // 投资人 AI 发言
+            const investorMsg = await investorAISay(
               accessToken,
-              project.oneLiner,
-              project.user.name,
+              investor.investorProfile.oneLiner,
+              founderProfile.oneLiner,
+              investor.name,
               conversation,
               round
             )
             conversation.push({
-              role: "founder-ai",
-              content: founderMsg,
+              role: "investor-ai",
+              content: investorMsg,
               timestamp: formatTime(baseTime, (round - 1) * 6 + 3),
             })
             send({
               type: "message",
-              role: "founder-ai",
-              content: founderMsg,
+              role: "investor-ai",
+              content: investorMsg,
               round,
-              projectIndex: i + 1,
+              investorIndex: i + 1,
             })
           }
 
-          // 评估
+          // 评估对话结果
           const evaluation = evaluateMatch(conversation)
+
           const matchResult = {
-            id: project.id,
-            name: project.user.name,
-            org: project.oneLiner.slice(0, 30) + "...",
-            avatar: project.user.avatar || project.user.name.slice(0, 2),
+            id: investor.id,
+            name: investor.name,
+            org: investor.bio || "投资人",
+            avatar: investor.avatar || investor.name.slice(0, 2),
             score: evaluation.score,
             highlights: evaluation.highlights,
             risks: evaluation.risks,
             chatRounds: 3,
             conversation,
             matched: evaluation.matched,
-            route: evaluation.matched ? project.user.route || undefined : undefined,
+            route: evaluation.matched ? investor.route || undefined : undefined,
           }
           matches.push(matchResult)
 
           send({
-            type: "project_complete",
-            projectIndex: i + 1,
+            type: "investor_complete",
+            investorIndex: i + 1,
             matched: evaluation.matched,
             score: evaluation.score,
           })
         }
 
-        // 排序
+        // 按匹配成功优先，然后按分数排序
         matches.sort((a, b) => {
           if (a.matched !== b.matched) return b.matched ? 1 : -1
           return b.score - a.score
@@ -300,7 +316,7 @@ export async function POST(request: NextRequest) {
 
         send({
           type: "complete",
-          matches,
+          matches: matches.slice(0, 10),
           totalMatched: matches.filter((m: any) => m.matched).length,
         })
       } catch (error) {

@@ -14,6 +14,7 @@ function formatTime(baseTime: Date, minOffset: number): string {
 async function founderAISay(
   accessToken: string,
   projectOneLiner: string,
+  founderName: string,
   existingMessages: ChatMessage[],
   round: number
 ): Promise<string> {
@@ -24,12 +25,12 @@ async function founderAISay(
     .join("\n")
 
   const prompts: Record<number, string> = {
-    1: `你是一位创业者AI，正在向投资人介绍项目。
+    1: `你是创业者${founderName}的AI代表，正在向投资人介绍项目。
 你的项目：${projectOneLiner}
 
 请用2-3句话开场，介绍项目核心价值，并询问投资人的投资偏好。`,
 
-    2: `你是一位创业者AI，正在与投资人深入沟通。
+    2: `你是创业者${founderName}的AI代表，正在与投资人深入沟通。
 你的项目：${projectOneLiner}
 之前对话：
 ${context}
@@ -37,7 +38,7 @@ ${context}
 
 请用具体的数据或案例回答，展示项目实力。2-3句话。`,
 
-    3: `你是一位创业者AI，这是最后一轮对话。
+    3: `你是创业者${founderName}的AI代表，这是最后一轮对话。
 你的项目：${projectOneLiner}
 之前对话：
 ${context}
@@ -54,6 +55,7 @@ ${context}
 async function investorAISay(
   accessToken: string,
   investorOneLiner: string,
+  projectOneLiner: string,
   investorName: string,
   existingMessages: ChatMessage[],
   round: number
@@ -67,11 +69,11 @@ async function investorAISay(
   const prompts: Record<number, string> = {
     1: `你是投资人${investorName}的AI代表，正在评估一个创业项目。
 你的投资偏好：${investorOneLiner}
-创业者说：${lastFounderMsg}
+对方项目：${projectOneLiner}
 
-请表达对项目的初步看法，并提出一个关于产品或市场的问题。2句话。`,
+请用2-3句话开场，表达对项目的初步兴趣，并提出一个关于产品或市场的问题。`,
 
-    2: `你是投资人${investorName}的AI代表。
+    2: `你是投资人${investorName}的AI代表，正在与创业者深入沟通。
 你的投资偏好：${investorOneLiner}
 之前对话：
 ${context}
@@ -91,6 +93,27 @@ ${context}
 
   const result = await chatWithSecondMe(accessToken, prompts[round] || prompts[1])
   return result || "感谢分享，我需要再考虑一下。"
+}
+
+// 计算项目与投资偏好的相关性分数
+function calculateRelevanceScore(projectOneLiner: string, investorOneLiner: string): number {
+  const projectKeywords = projectOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
+  const investorKeywords = investorOneLiner.toLowerCase().split(/[\s，,。.！!？?]+/).filter(w => w.length > 1)
+
+  let matchCount = 0
+  for (const pw of projectKeywords) {
+    for (const iw of investorKeywords) {
+      if (pw.includes(iw) || iw.includes(pw)) {
+        matchCount++
+      }
+    }
+  }
+
+  const baseScore = 50
+  const keywordBonus = Math.min(matchCount * 10, 40)
+  const randomBonus = Math.floor(Math.random() * 10)
+
+  return baseScore + keywordBonus + randomBonus
 }
 
 // 评估对话结果，判断是否匹配
@@ -129,11 +152,14 @@ function evaluateMatch(conversation: ChatMessage[]): { matched: boolean; score: 
 }
 
 export async function POST(request: NextRequest) {
+  console.log("=== Match Founder API Called ===")
   try {
     const cookieStore = await cookies()
     const accessToken = cookieStore.get("secondme_access_token")?.value
+    console.log("Access token exists:", !!accessToken)
 
     if (!accessToken) {
+      console.log("No access token, returning 401")
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
@@ -142,9 +168,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const founderProfile = body as FounderProfile
+    console.log("Founder profile:", founderProfile)
 
     // 验证必填字段
     if (!founderProfile.oneLiner) {
+      console.log("Missing oneLiner, returning 400")
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -152,6 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 从数据库获取所有投资人及其偏好
+    console.log("Fetching active investors...")
     const investors = await prisma.user.findMany({
       where: {
         role: "investor",
@@ -161,8 +190,10 @@ export async function POST(request: NextRequest) {
         investorProfile: true,
       },
     })
+    console.log("Found investors:", investors.length)
 
     if (investors.length === 0) {
+      console.log("No investors found, returning empty matches")
       return NextResponse.json({
         success: true,
         matches: [],
@@ -171,24 +202,44 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // 计算每个投资人与项目的相关性分数
+    const investorsWithScore = investors
+      .filter(inv => inv.investorProfile)
+      .map(investor => ({
+        investor,
+        relevanceScore: calculateRelevanceScore(
+          founderProfile.oneLiner,
+          investor.investorProfile!.oneLiner
+        )
+      }))
+
+    // 按相关性分数排序，选择最相关的1个
+    investorsWithScore.sort((a, b) => b.relevanceScore - a.relevanceScore)
+    const investorsToMatch = investorsWithScore.slice(0, 1).map(i => i.investor)
+    console.log("Matching with", investorsToMatch.length, "most relevant investors")
+
     // 对每个投资人进行 AI 对话匹配
     const matchResults: MatchResult[] = []
 
-    for (const investor of investors) {
+    for (const investor of investorsToMatch) {
       if (!investor.investorProfile) continue
 
+      console.log("Processing investor:", investor.id, investor.investorProfile.oneLiner.slice(0, 30))
       const conversation: ChatMessage[] = []
       const baseTime = new Date()
 
       // 进行 3 轮对话
       for (let round = 1; round <= 3; round++) {
+        console.log(`  Round ${round} starting...`)
         // 创业者 AI 发言
         const founderMsg = await founderAISay(
           accessToken,
           founderProfile.oneLiner,
+          founderProfile.name || "创业者",
           conversation,
           round
         )
+        console.log(`  Founder AI said: ${founderMsg.slice(0, 50)}...`)
         conversation.push({
           role: "founder-ai",
           content: founderMsg,
@@ -199,10 +250,12 @@ export async function POST(request: NextRequest) {
         const investorMsg = await investorAISay(
           accessToken,
           investor.investorProfile.oneLiner,
+          founderProfile.oneLiner,
           investor.name,
           conversation,
           round
         )
+        console.log(`  Investor AI said: ${investorMsg.slice(0, 50)}...`)
         conversation.push({
           role: "investor-ai",
           content: investorMsg,
@@ -210,6 +263,7 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      console.log(`  Investor ${investor.id} done, ${conversation.length} messages`)
       // 评估对话结果
       const evaluation = evaluateMatch(conversation)
 

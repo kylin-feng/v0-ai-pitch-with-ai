@@ -22,6 +22,12 @@ export async function POST(request: Request) {
       getUserShades(accessToken),
     ])
 
+    console.log("User info result:", userInfo ? `User ${userInfo.name}` : 'null')
+    console.log("User shades count:", shades?.length || 0)
+    if (shades && shades.length > 0) {
+      console.log("First shade:", JSON.stringify(shades[0]))
+    }
+
     if (!userInfo) {
       return NextResponse.json({ code: 401, error: "Failed to fetch user info" }, { status: 401 })
     }
@@ -52,17 +58,22 @@ export async function POST(request: Request) {
 
     // 同步用户标签
     if (shades && shades.length > 0) {
-      // 先删除旧的标签
-      await prisma.userShade.deleteMany({ where: { userId: user.id } })
-      // 创建新的标签
-      await prisma.userShade.createMany({
-        data: shades.map((shade) => ({
-          userId: user.id,
-          tag: shade.tag,
-          confidence: shade.confidence || 0,
-          description: shade.description,
-        })),
-      })
+      // 过滤掉无效的 shade（tag 为空的记录）
+      const validShades = shades.filter(shade => shade.tag && shade.tag.trim() !== '')
+
+      if (validShades.length > 0) {
+        // 先删除旧的标签
+        await prisma.userShade.deleteMany({ where: { userId: user.id } })
+        // 创建新的标签
+        await prisma.userShade.createMany({
+          data: validShades.map((shade) => ({
+            userId: user.id,
+            tag: shade.tag,
+            confidence: shade.confidence || 0,
+            description: shade.description || '',
+          })),
+        })
+      }
     }
 
     // 获取完整用户信息

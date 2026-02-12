@@ -6,14 +6,15 @@ import { FounderForm } from "@/components/founder-form"
 import { InvestorForm } from "@/components/investor-form"
 import { ProjectList } from "@/components/project-list"
 import { InvestorPreferenceList } from "@/components/investor-preference-list"
-import { MatchingAnimation } from "@/components/matching-animation"
+import { LiveFounderMatching } from "@/components/live-founder-matching"
 import { LiveMatching } from "@/components/live-matching"
 import { ResultsScreen } from "@/components/results-screen"
 import { ChatDetail } from "@/components/chat-detail"
-import { matchFounderToInvestors, matchInvestorToFounders } from "@/lib/api"
+import { ProjectMarketplace } from "@/components/project-marketplace"
+import { InvestorMarketplace } from "@/components/investor-marketplace"
 import type { Role, MatchResult, FounderProfile, InvestorProfile, SecondMeUserProfile, SecondMeShade } from "@/lib/types"
 
-type AppStep = "login" | "list" | "form" | "matching" | "results" | "chat-detail"
+type AppStep = "login" | "list" | "form" | "matching" | "results" | "chat-detail" | "project-marketplace" | "investor-marketplace"
 
 interface Project {
   id: string
@@ -131,7 +132,8 @@ export default function Page() {
 
       if (pendingRole) {
         setRole(pendingRole)
-        setStep("list") // 先显示列表
+        // 创业者看投资人广场，投资人看项目广场
+        setStep(pendingRole === "founder" ? "investor-marketplace" : "project-marketplace")
         localStorage.removeItem("pendingRole")
 
         // 获取 SecondMe 用户信息并同步到数据库
@@ -147,7 +149,8 @@ export default function Page() {
 
   const handleLogin = useCallback((selectedRole: Role) => {
     setRole(selectedRole)
-    setStep("list")
+    // 创业者看投资人广场，投资人看项目广场
+    setStep(selectedRole === "founder" ? "investor-marketplace" : "project-marketplace")
   }, [])
 
   // 创业者保存项目
@@ -193,7 +196,7 @@ export default function Page() {
   }, [])
 
   // 创业者选择项目进行匹配
-  const handleSelectProject = useCallback(async (project: Project) => {
+  const handleSelectProject = useCallback((project: Project) => {
     const profile: FounderProfile = {
       projectName: project.projectName,
       oneLiner: project.oneLiner,
@@ -201,25 +204,11 @@ export default function Page() {
       fundingAmount: project.fundingAmount,
       userCount: project.userCount,
       revenue: project.revenue,
+      name: secondMeUser?.name || dbUser?.name || "创业者",
     }
     setFounderProfile(profile)
     setStep("matching")
-    setIsLoading(true)
-
-    try {
-      const response = await matchFounderToInvestors(profile)
-      if (response.success) {
-        setMatches(response.matches)
-      } else {
-        setMatches([])
-      }
-    } catch (error) {
-      console.error("Match error:", error)
-      setMatches([])
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  }, [secondMeUser, dbUser])
 
   // 投资人选择偏好进行匹配
   const handleSelectPreference = useCallback(async (preference: InvestorPreferenceData) => {
@@ -238,7 +227,10 @@ export default function Page() {
     setStep("results")
   }, [])
 
-  const handleMatchingComplete = useCallback(() => {
+  // 创业者匹配完成
+  const handleFounderMatchComplete = useCallback((matchResults: MatchResult[]) => {
+    console.log("Founder match complete:", matchResults)
+    setMatches(matchResults)
     setStep("results")
   }, [])
 
@@ -265,6 +257,18 @@ export default function Page() {
     setStep("results")
   }, [])
 
+  // 从投资人广场发起匹配（创业者视角）
+  const handleStartMatchFromInvestorMarketplace = useCallback((investorId: string) => {
+    // 直接跳转到项目列表，让用户选择项目发起匹配
+    setStep("list")
+  }, [])
+
+  // 从项目广场发起匹配（投资人视角）
+  const handleStartMatchFromProjectMarketplace = useCallback((projectId: string) => {
+    // 直接跳转到偏好列表，让用户选择偏好发起匹配
+    setStep("list")
+  }, [])
+
   // Debug log
   console.log("Current state - step:", step, "role:", role)
 
@@ -280,6 +284,7 @@ export default function Page() {
         onSelectProject={handleSelectProject}
         onCreateNew={() => setStep("form")}
         onBack={handleBackToLogin}
+        onBrowseInvestors={() => setStep("investor-marketplace")}
         userName={secondMeUser?.name || dbUser?.name}
       />
     )
@@ -292,6 +297,7 @@ export default function Page() {
         onSelectPreference={handleSelectPreference}
         onCreateNew={() => setStep("form")}
         onBack={handleBackToLogin}
+        onBrowseProjects={() => setStep("project-marketplace")}
         userName={secondMeUser?.name || dbUser?.name}
       />
     )
@@ -321,6 +327,16 @@ export default function Page() {
   }
 
   if (step === "matching") {
+    // 创业者使用实时匹配展示
+    if (role === "founder" && founderProfile) {
+      return (
+        <LiveFounderMatching
+          founderProfile={founderProfile}
+          onComplete={handleFounderMatchComplete}
+          onCancel={handleBackToList}
+        />
+      )
+    }
     // 投资人使用实时匹配展示
     if (role === "investor" && investorProfile) {
       return (
@@ -331,8 +347,8 @@ export default function Page() {
         />
       )
     }
-    // 创业者使用原来的动画
-    return <MatchingAnimation onComplete={handleMatchingComplete} />
+    // 如果没有 profile，返回列表
+    return null
   }
 
   if (step === "chat-detail" && selectedMatch) {
@@ -345,6 +361,26 @@ export default function Page() {
         role={role}
         matches={matches}
         onViewChat={handleViewChat}
+      />
+    )
+  }
+
+  if (step === "project-marketplace") {
+    return (
+      <ProjectMarketplace
+        onBack={handleBackToLogin}
+        onMyProjects={() => setStep("list")}
+        onStartMatch={handleStartMatchFromProjectMarketplace}
+      />
+    )
+  }
+
+  if (step === "investor-marketplace") {
+    return (
+      <InvestorMarketplace
+        onBack={handleBackToLogin}
+        onMyProjects={() => setStep("list")}
+        onStartMatch={handleStartMatchFromInvestorMarketplace}
       />
     )
   }
